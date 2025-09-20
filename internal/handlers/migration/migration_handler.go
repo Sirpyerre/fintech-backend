@@ -22,6 +22,16 @@ func NewMigrationHandler(migrationService services.Migrationer, logger zerolog.L
 	}
 }
 
+// Migrate godoc
+// @Summary Migrate transactions from a CSV file
+// @Tags Migration Service
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "CSV file to upload"
+// @Success 200 {object} map[string]string "Migration successful"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /migrate [post]
 func (h *MigrationHandler) Migrate(w http.ResponseWriter, r *http.Request) error {
 	file, err := extractFile(r)
 	if err != nil {
