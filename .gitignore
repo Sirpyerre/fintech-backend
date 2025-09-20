@@ -1,0 +1,30 @@
+# Archivos de Go generados
+/bin
+/dist
+*.test
+*.exe
+!*.go
+
+# Dependencias de Go
+/vendor
+/pkg
+
+# Archivos de la base de datos de PostgreSQL
+# Ignora los volúmenes de datos de Docker
+/data
+/db
+
+# Archivos de la aplicación Docker
+# Ignora cualquier archivo de log que la app pudiera generar
+*.log
+
+# Archivos de entorno y configuración
+# Mantén los archivos de ejemplo en el control de versiones, pero ignora los reales
+.env
+.env.*
+config.local.json
+
+# Varios
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    platform: linux/arm64/v8  # Optimized for Apple Silicon (M4)
+    environment:
+      POSTGRES_USER: fintech_user
+      POSTGRES_PASSWORD: secure_password_123
+      POSTGRES_DB: fintech_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U fintech_user -d fintech_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fintech_network
+
+volumes:
+  db_data:
+
+networks:
+  fintech_network:
+    driver: bridge
