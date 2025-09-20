@@ -7,7 +7,6 @@
 
 # Dependencias de Go
 /vendor
-/pkg
 
 # Archivos de la base de datos de PostgreSQL
 # Ignora los volúmenes de datos de Docker

@@ -1,43 +1,56 @@
 package migration
 
 import (
+	"errors"
 	"github.com/Sirpyerre/fintech-backend/internal/services"
+	"github.com/Sirpyerre/fintech-backend/pkg/common"
+	"github.com/rs/zerolog"
+	"mime/multipart"
 	"net/http"
+	"strings"
 )
 
 type MigrationHandler struct {
 	MigrationService services.Migrationer
+	logger           zerolog.Logger
 }
 
-func NewMigrationHandler(migrationService services.Migrationer) *MigrationHandler {
-	return &MigrationHandler{MigrationService: migrationService}
+func NewMigrationHandler(migrationService services.Migrationer, logger zerolog.Logger) *MigrationHandler {
+	return &MigrationHandler{
+		MigrationService: migrationService,
+		logger:           logger,
+	}
 }
 
 func (h *MigrationHandler) Migrate(w http.ResponseWriter, r *http.Request) error {
-	err := r.ParseMultipartForm(10 << 20) // limit your max input length!
+	file, err := extractFile(r)
 	if err != nil {
-		http.Error(w, "Error parsing multipart form", http.StatusBadRequest)
-		return err
+		return common.JSONError(w, http.StatusBadRequest, err.Error())
 	}
-
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, "Error retrieving the file", http.StatusBadRequest)
-		return err
-	}
-	defer file.Close()
 
 	err = h.MigrationService.Migrate(r.Context(), file)
 	if err != nil {
-		http.Error(w, "Error migrating data", http.StatusInternalServerError)
-		return err
+		return common.JSONError(w, http.StatusInternalServerError, err.Error())
 	}
 
-	w.WriteHeader(http.StatusOK)
-	return nil
+	return common.JSONSuccess(w, http.StatusOK, map[string]string{"message": "Migration successful"})
 }
 
-func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+func extractFile(r *http.Request) (file multipart.File, err error) {
+	if r.Header.Get("Content-Type") == "" || !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		return nil, errors.New("Content-Type must be multipart/form-data")
+	}
+
+	err = r.ParseMultipartForm(10 << 20) // limit your max input length!
+	if err != nil {
+		return nil, err
+	}
+
+	file, _, err = r.FormFile("file")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	return file, nil
 }
