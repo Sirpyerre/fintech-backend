@@ -2,10 +2,10 @@ package repository
 
 import (
 	"context"
-
 	"github.com/Sirpyerre/fintech-backend/internal/dbconnection"
 	"github.com/Sirpyerre/fintech-backend/internal/models"
 	"github.com/rs/zerolog"
+	"time"
 )
 
 type TransactionRepository struct {
@@ -56,4 +56,43 @@ func (r *TransactionRepository) StoreTransaction(ctx context.Context, records []
 		return err
 	}
 	return nil
+}
+
+func (r *TransactionRepository) FindUserExists(ctx context.Context, userID int64) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM users WHERE id=$1)`
+	err := r.DBConnection.Conn.QueryRow(ctx, query, userID).Scan(&exists)
+	if err != nil {
+		r.logger.Error().Err(err).Msg("the user does not exist")
+		return false, err
+	}
+
+	return exists, nil
+}
+
+func (r *TransactionRepository) BalanceSummary(ctx context.Context, userID int64, from, to *time.Time) (float64, float64, float64, error) {
+	var totalCredits, totalDebits float64
+	query := `SELECT 
+				COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS total_credits,
+				COALESCE(SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END), 0) AS total_debits
+			  FROM transactions 
+			  WHERE user_id = $1`
+
+	if from != nil && to != nil {
+		query += ` AND datetime BETWEEN $2 AND $3`
+		err := r.DBConnection.Conn.QueryRow(ctx, query, userID, *from, *to).Scan(&totalCredits, &totalDebits)
+		if err != nil {
+			r.logger.Error().Err(err).Msg("failed to get balance summary with date range")
+			return 0, 0, 0, err
+		}
+	} else {
+		err := r.DBConnection.Conn.QueryRow(ctx, query, userID).Scan(&totalCredits, &totalDebits)
+		if err != nil {
+			r.logger.Error().Err(err).Msg("failed to get balance summary without date range")
+			return 0, 0, 0, err
+		}
+	}
+
+	balance := totalCredits + totalDebits
+	return totalCredits, totalDebits, balance, nil
 }
