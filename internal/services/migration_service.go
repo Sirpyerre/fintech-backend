@@ -8,23 +8,26 @@ import (
 	"github.com/rs/zerolog"
 	"io"
 	"strconv"
+	"sync"
 	"time"
 )
 
 type MigrationService struct {
 	transactionRepo repository.Transactioner
 	logger          zerolog.Logger
+	workers         int
 }
 
-func NewMigrationService(transactionRepo repository.Transactioner, logger zerolog.Logger) *MigrationService {
+func NewMigrationService(transactionRepo repository.Transactioner, workers int, logger zerolog.Logger) *MigrationService {
 	return &MigrationService{
 		transactionRepo: transactionRepo,
 		logger:          logger,
+		workers:         workers,
 	}
 }
 
-func (m MigrationService) Migrate(ctx context.Context, cvsFile io.Reader) error {
-	transactions, err := parseCSV(cvsFile)
+func (m *MigrationService) Migrate(ctx context.Context, cvsFile io.Reader) error {
+	transactions, err := m.parseCSV(cvsFile)
 	if err != nil {
 		m.logger.Printf("Error parsing CSV: %v", err)
 		return err
@@ -38,7 +41,7 @@ func (m MigrationService) Migrate(ctx context.Context, cvsFile io.Reader) error 
 	return nil
 }
 
-func parseCSV(file io.Reader) ([]models.Transaction, error) {
+func (m *MigrationService) parseCSV(file io.Reader) ([]models.Transaction, error) {
 	if file == nil {
 		return nil, nil
 	}
@@ -49,37 +52,77 @@ func parseCSV(file io.Reader) ([]models.Transaction, error) {
 		return nil, err
 	}
 
-	var transactions []models.Transaction
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		amount, err := parseAmount(record[2])
-		if err != nil {
-			return nil, err
-		}
-
-		date, err := parseDate(record[3])
-		if err != nil {
-			return nil, err
-		}
-
-		transaction := models.Transaction{
-			ID:         record[0],
-			UserID:     record[1],
-			Amount:     amount,
-			OccurredAt: date,
-		}
-
-		transactions = append(transactions, transaction)
+	type parseResult struct {
+		Tx  *models.Transaction
+		Err error
 	}
 
+	jobs := make(chan []string)
+	results := make(chan parseResult)
+	var wg sync.WaitGroup
+
+	// workers
+	for i := 0; i < m.workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for record := range jobs {
+				tx, err := parseRecord(record)
+				if err != nil {
+					m.logger.Error().Err(err).Str("row", record[0]).Msg("Skipping row due to parse error")
+					continue // skip this row
+				}
+				results <- parseResult{Tx: tx, Err: nil}
+			}
+		}()
+	}
+
+	go func() {
+		for {
+			record, err := reader.Read()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				results <- parseResult{Tx: nil, Err: err}
+				continue
+			}
+			jobs <- record
+		}
+		close(jobs)
+	}()
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	var transactions []models.Transaction
+	for res := range results {
+		if res.Tx != nil {
+			transactions = append(transactions, *res.Tx)
+		}
+	}
 	return transactions, nil
+}
+
+func parseRecord(record []string) (*models.Transaction, error) {
+	amount, err := parseAmount(record[2])
+	if err != nil {
+		return nil, err
+	}
+
+	date, err := parseDate(record[3])
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.Transaction{
+		ID:         record[0],
+		UserID:     record[1],
+		Amount:     amount,
+		OccurredAt: date,
+	}, nil
 }
 
 func parseDate(dateStr string) (time.Time, error) {

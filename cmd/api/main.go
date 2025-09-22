@@ -35,7 +35,7 @@ func main() {
 
 	// Initialize repositories, services, and handlers
 	transactionRepo := repository.NewTransactionRepository(dbConn, logger)
-	transactionService := services.NewMigrationService(transactionRepo, logger)
+	transactionService := services.NewMigrationService(transactionRepo, cfg.WorkerCount, logger)
 	migrationHandler := migration.NewMigrationHandler(transactionService, logger)
 
 	balanceService := services.NewBalanceService(transactionRepo, logger)

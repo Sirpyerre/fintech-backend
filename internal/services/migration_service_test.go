@@ -15,11 +15,12 @@ import (
 func TestMigrationService(t *testing.T) {
 	logger := zerolog.Nop()
 	ctx := context.Background()
+	workerCount := 2
 
 	t.Run("NewTransactionRepository initializes fields", func(t *testing.T) {
 		repositoryMock := new(mocks.TransactionRepositoryMock)
 
-		migrationService := NewMigrationService(repositoryMock, logger)
+		migrationService := NewMigrationService(repositoryMock, workerCount, logger)
 		assert.IsType(t, &MigrationService{}, migrationService)
 	})
 
@@ -27,7 +28,7 @@ func TestMigrationService(t *testing.T) {
 		repositoryMock := new(mocks.TransactionRepositoryMock)
 		repositoryMock.On("StoreTransaction", mock.Anything, mock.Anything).Return(assert.AnError)
 
-		migrationService := NewMigrationService(repositoryMock, logger)
+		migrationService := NewMigrationService(repositoryMock, workerCount, logger)
 		err := migrationService.Migrate(ctx, nil)
 		assert.Error(t, err)
 		assert.Equal(t, assert.AnError, err)
@@ -39,7 +40,7 @@ func TestMigrationService(t *testing.T) {
 		repositoryMock := new(mocks.TransactionRepositoryMock)
 		repositoryMock.On("StoreTransaction", mock.Anything, mock.Anything).Return(assert.AnError)
 
-		migrationService := NewMigrationService(repositoryMock, logger)
+		migrationService := NewMigrationService(repositoryMock, workerCount, logger)
 		csvData := `id,user_id,amount,occurred_at
 1,2,100.50,2023-10-01T10:00:00Z
 2,1,200.75,2023-10-02T11:30:00Z
@@ -55,7 +56,7 @@ func TestMigrationService(t *testing.T) {
 		repositoryMock := new(mocks.TransactionRepositoryMock)
 		repositoryMock.On("StoreTransaction", mock.Anything, mock.Anything).Return(nil)
 
-		migrationService := NewMigrationService(repositoryMock, logger)
+		migrationService := NewMigrationService(repositoryMock, workerCount, logger)
 		csvData := `id,user_id,amount,occurred_at
 1,2,100.50,2023-10-01T10:00:00Z
 2,1,200.75,2023-10-02T11:30:00Z

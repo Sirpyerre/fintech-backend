@@ -30,4 +30,11 @@ CREATE INDEX idx_transactions_datetime ON transactions (datetime);
 INSERT INTO users (id, name, lastname, created_at)
 VALUES (1, 'Peter', 'Doe', '2024-06-01T10:00:00Z'),
        (2, 'Jane', 'Smith', '2024-06-01T10:00:00Z'),
-       (4, 'Alice', 'Johnson', '2024-06-01T10:00:00Z');
+       (3, 'John', 'Brown', '2024-06-01T10:00:00Z'),
+       (4, 'Alice', 'Johnson', '2024-06-01T10:00:00Z'),
+       (5, 'Bob', 'Davis', '2024-06-01T10:00:00Z'),
+       (6, 'Charlie', 'Miller', '2024-06-01T10:00:00Z'),
+       (7, 'Diana', 'Wilson', '2024-06-01T10:00:00Z'),
+       (8, 'Ethan', 'Moore', '2024-06-01T10:00:00Z'),
+       (9, 'Fiona', 'Taylor', '2024-06-01T10:00:00Z'),
+       (10, 'George', 'Anderson', '2024-06-01T10:00:00Z');
