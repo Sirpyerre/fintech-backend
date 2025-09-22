@@ -23,14 +23,15 @@ import (
 func main() {
 	ctx := context.Background()
 	cfg := config.NewConfiguration(ctx)
-	dbConn, err := dbconnection.NewDBConnection(ctx, cfg.DBConfig.DatabaseURL)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
 
 	// logger setup
 	logger := observability.InitLogger(cfg.LogLevel)
 	logger.Info().Msg("Logger initialized")
+
+	dbConn, err := dbconnection.NewDBConnection(ctx, cfg.DBConfig.DatabaseURL)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to connect to the database")
+	}
 
 	// Initialize repositories, services, and handlers
 	transactionRepo := repository.NewTransactionRepository(dbConn, logger)
