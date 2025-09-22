@@ -1,7 +1,4 @@
 # FinTech Solutions Backend
-
-Updated README to reflect latest changes (September 2025).
-
 ## Overview
 
 This repository implements a small backend in Go that provides two main features:
@@ -55,6 +52,9 @@ When running locally without Docker, set `DATABASE_URL` and optionally `PORT`/`L
 1. Install dependencies and build
 
 ```bash
+go mod download
+go build -o fintech-backend ./cmd/api
+```
 ## FinTech Backend
 
 This repository contains a small Go backend that provides two main features:
