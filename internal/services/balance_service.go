@@ -16,19 +16,19 @@ var (
 )
 
 type BalanceService struct {
-	transactionService repository.Transactioner
+	transactionRepository repository.Transactioner
 	logger             zerolog.Logger
 }
 
-func NewBalanceService(transactionService repository.Transactioner, logger zerolog.Logger) *BalanceService {
+func NewBalanceService(repo repository.Transactioner, logger zerolog.Logger) *BalanceService {
 	return &BalanceService{
-		transactionService: transactionService,
+		transactionRepository: repo,
 		logger:             logger,
 	}
 }
 
 func (b BalanceService) Balance(ctx context.Context, userID int64, from, to *time.Time) (models.BalanceResponse, error) {
-	exists, err := b.transactionService.FindUserExists(ctx, userID)
+	exists, err := b.transactionRepository.FindUserExists(ctx, userID)
 	if err != nil {
 		return models.BalanceResponse{}, err
 	}
@@ -41,7 +41,7 @@ func (b BalanceService) Balance(ctx context.Context, userID int64, from, to *tim
 		return models.BalanceResponse{}, ErrInvalidDateRange
 	}
 
-	totalCredits, totalDebits, balance, err := b.transactionService.BalanceSummary(ctx, userID, from, to)
+	totalCredits, totalDebits, balance, err := b.transactionRepository.BalanceSummary(ctx, userID, from, to)
 	if err != nil {
 		return models.BalanceResponse{}, err
 	}

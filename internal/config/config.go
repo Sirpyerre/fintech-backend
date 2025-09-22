@@ -8,10 +8,10 @@ import (
 )
 
 type Config struct {
-	Port     string `env:"PORT" envDefault:"8080"`
+	Port     string `env:"PORT, default=8000"`
 	DBConfig DBConfig
-	Env      string `env:"ENV" envDefault:"development"`
-	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`
+	Env      string `env:"ENV, default=development"`
+	LogLevel string `env:"LOG_LEVEL, default=info"`
 }
 
 type DBConfig struct {

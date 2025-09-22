@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://fintech_user:secure_password_123@db:5432/fintech_db
+      LOG_LEVEL: debug
+      ENV: development
+      PORT: 8000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+    depends_on:
+      - db
+    networks:
+      - fintech_network
+
   db:
     image: postgres:16-alpine
     platform: linux/arm64/v8  # Optimized for Apple Silicon (M4)

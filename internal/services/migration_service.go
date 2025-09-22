@@ -39,6 +39,10 @@ func (m MigrationService) Migrate(ctx context.Context, cvsFile io.Reader) error 
 }
 
 func parseCSV(file io.Reader) ([]models.Transaction, error) {
+	if file == nil {
+		return nil, nil
+	}
+
 	reader := csv.NewReader(file)
 	_, err := reader.Read()
 	if err != nil {
