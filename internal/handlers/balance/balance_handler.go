@@ -45,24 +45,12 @@ func (h *BalanceHandler) GetBalance(w http.ResponseWriter, r *http.Request) erro
 	// get from and to from query parameters
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
-
-	var from, to *time.Time
-	if fromStr != "" {
-		fromTime, err := time.Parse(time.RFC3339, fromStr)
-		if err != nil {
-			return common.JSONError(w, http.StatusBadRequest, "Invalid 'from' date format")
-		}
-		from = &fromTime
-	}
-	if toStr != "" {
-		toTime, err := time.Parse(time.RFC3339, toStr)
-		if err != nil {
-			return common.JSONError(w, http.StatusBadRequest, "Invalid 'to' date format")
-		}
-		to = &toTime
+	dateRange, err := h.datetimeRange(fromStr, toStr)
+	if err != nil {
+		return common.JSONError(w, http.StatusBadRequest, "Invalid date format. Use RFC3339 format.")
 	}
 
-	balanceResponse, err := h.balanceService.Balance(r.Context(), int64(id), from, to)
+	balanceResponse, err := h.balanceService.Balance(r.Context(), int64(id), dateRange["from"], dateRange["to"])
 	if err != nil {
 		if errors.Is(err, services.ErrUserNotFound) {
 			return common.JSONError(w, http.StatusNotFound, err.Error())
@@ -75,4 +63,39 @@ func (h *BalanceHandler) GetBalance(w http.ResponseWriter, r *http.Request) erro
 	}
 
 	return common.JSONSuccess(w, http.StatusOK, balanceResponse)
+}
+
+func (h *BalanceHandler) datetimeRange(fromStr, toStr string) (map[string]*time.Time, error) {
+	from, err := h.parseDate(fromStr)
+	if err != nil {
+		return nil, err
+	}
+
+	to, err := h.parseDate(toStr)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]*time.Time{
+		"from": from,
+		"to":   to,
+	}, nil
+}
+
+func (h *BalanceHandler) parseDate(dateStr string) (*time.Time, error) {
+	if dateStr == "" {
+		return nil, nil
+	}
+	// Try RFC3339
+	t, err := time.Parse(time.RFC3339, dateStr)
+	if err == nil {
+		return &t, nil
+	}
+	// Try YYYY-MM-DD
+	t, err = time.Parse("2006-01-02", dateStr)
+	if err == nil {
+		return &t, nil
+	}
+	h.logger.Error().Err(err).Msg("Failed to parse date")
+	return nil, err
 }
