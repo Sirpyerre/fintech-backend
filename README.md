@@ -1,169 +1,95 @@
-# FinTech Solutions Backend
-## Overview
+# 💸 FinTech Solutions Backend Challenge
 
-This repository implements a small backend in Go that provides two main features:
+## 🚀 Project Overview
 
-- A Migration endpoint to upload historical transactions (CSV) into a PostgreSQL database.
-- A Balance endpoint to query user balances (optionally filtered by date range).
+This repository contains a backend solution for the technical challenge proposed by **FinTech Solutions Inc.**. The goal is to build two API services in **Go**:
 
-The project is intended to be run locally using Docker / Docker Compose or directly via `go build`.
+1. **Migration Service** (`POST /migrate`)  
+   Uploads and processes historical transaction data from CSV files into a PostgreSQL database.
 
-## Notable updates
+2. **Balance Service** (`GET /users/{user_id}/balance`)  
+   Retrieves a user's balance summary, with optional date filtering.
 
-- Application HTTP port changed to 8000 (API listens on :8000 and docker-compose maps host 8000 -> container 8000).
-- Environment variables and defaults are loaded via `sethvargo/go-envconfig`.
-- Swagger UI is exposed at `/swagger/`.
-- Health endpoint at `/health` (used by Docker healthchecks).
+The system is designed to be robust, scalable, and easy to deploy locally using Docker.
 
-## Technologies
+---
 
-- Go 1.24
-- PostgreSQL (containerized)
-- Docker & Docker Compose
-- chi router, zerolog, pgx/database/sql
+## 🏗️ Architecture and Design Patterns
 
-## Quickstart (Docker)
+The project follows a **layered architecture** to promote separation of concerns and modularity:
 
-Prerequisites: Docker and Docker Compose.
+- **Presentation Layer (Handlers)**: Handles HTTP requests and delegates logic to services.
+- **Service Layer (Business Logic)**: Encapsulates core rules like CSV parsing and balance calculations.
+- **Repository Layer (Data Access)**: Abstracts database operations using the **Repository Pattern**.
 
-1. Build and start services
+### ✅ SOLID Principles
+
+- **SRP**: Each component has a single responsibility.
+- **DIP**: Services depend on interfaces, not concrete implementations.
+
+### 🧩 Additional Patterns
+
+- **Repository Pattern**: Decouples persistence from business logic.
+- **Service Layer Pattern**: Keeps transport logic (HTTP) separate from core rules.
+
+---
+
+## 🛠️ Technologies Used
+
+- **Language**: Go (Golang)
+- **Database**: PostgreSQL
+- **Containers**: Docker & Docker Compose
+- **Libraries**:
+  - `go-chi/chi` — HTTP routing
+  - `rs/zerolog` — Structured logging
+  - `sethvargo/go-envconfig` — Environment config
+  - `pgx` & `database/sql` — PostgreSQL drivers
+  - `encoding/csv` — CSV parsing
+  - `swaggo/swag` — Swagger documentation
+
+---
+
+## 🚀 Getting Started
+
+### ▶️ Prerequisites
+
+- Docker & Docker Compose installed
+
+### ▶️ Run with Docker
 
 ```bash
+git clone https://github.com/Sirpyerre/fintech-backend.git
+cd fintech-backend
 docker-compose up --build
 ```
 
-2. The API will be available at http://localhost:8000
+The API will be available at:  
+`http://localhost:8080`
 
-3. Healthcheck: http://localhost:8000/health
+---
 
-4. Swagger UI: http://localhost:8000/swagger/index.html
+## 📖 API Documentation
 
-## Environment variables (used in docker-compose)
+### 🔄 Migration Service
 
-- DATABASE_URL: postgres://fintech_user:secure_password_123@db:5432/fintech_db
-- PORT: 8000 (default)
-- LOG_LEVEL: debug
-- ENV: development
+**`POST /migrate`**
 
-When running locally without Docker, set `DATABASE_URL` and optionally `PORT`/`LOG_LEVEL`.
+- Upload a CSV file with transactions.
+- Header: `Content-Type: multipart/form-data`
+- Field name: `file`
+- Expected columns: `id,user_id,amount,datetime`
 
-## Build and run locally
+### 💰 Balance Service
 
-1. Install dependencies and build
+**`GET /users/{user_id}/balance`**
 
-```bash
-go mod download
-go build -o fintech-backend ./cmd/api
-```
-## FinTech Backend
+- Returns balance, total credits, and total debits.
 
-This repository contains a small Go backend that provides two main features:
+**Optional query params**:
+- `from`: Start date (RFC3339)
+- `to`: End date (RFC3339)
 
-- Uploading historical transactions (CSV) into a PostgreSQL database via a migration endpoint.
-- Querying user balances via a balance endpoint with optional date range filtering.
-
-The service runs on port 8000 by default and can be run with Docker Compose or built and run locally.
-
-## What's in this README
-
-- Setup (Docker and local)
-- Configuration / Environment variables
-- API endpoints and examples
-- Database & migrations
-- Testing
-
-## Requirements
-
-- Go 1.24
-- Docker & Docker Compose (for containerized run)
-
-## Quickstart — Docker (recommended)
-
-1. Build and start services
-
-```bash
-docker-compose up --build
-```
-
-2. The API will be available at:
-
-http://localhost:8000
-
-3. Useful endpoints
-
-- Health: http://localhost:8000/health
-- Swagger UI: http://localhost:8000/swagger/index.html
-
-The `docker-compose.yml` maps host port 8000 to container port 8000 and mounts `init.sql` into the Postgres container to initialize the schema on first boot.
-
-## Run locally (without Docker)
-
-1. Ensure you have a running PostgreSQL instance and set `DATABASE_URL` accordingly.
-
-2. Download dependencies and build:
-
-```bash
-go mod download
-go build -o fintech-backend ./cmd/api
-```
-
-2. Run (example):
-
-```bash
-DATABASE_URL=postgres://fintech_user:secure_password_123@localhost:5432/fintech_db \
-PORT=8000 LOG_LEVEL=debug ./fintech-backend
-```
-
-## Configuration / Environment variables
-
-The app uses `sethvargo/go-envconfig` to load environment variables. Key variables:
-
-- DATABASE_URL (required) — Postgres connection string, e.g. postgres://user:pass@host:5432/dbname
-- PORT — HTTP port (default: 8000)
-- LOG_LEVEL — logging level (default: info)
-- ENV — environment name (default: development)
-
-Example `docker-compose` environment (used in the included `docker-compose.yml`):
-
-```yaml
-DATABASE_URL: postgres://fintech_user:secure_password_123@db:5432/fintech_db
-PORT: 8000
-LOG_LEVEL: debug
-ENV: development
-```
-
-## API Reference
-
-Base URL: http://localhost:8000
-
-1) POST /migrate
-
-- Description: Upload a CSV file containing historical transactions which will be parsed and inserted into the database.
-- Request: multipart/form-data; form field name: `file`
-- CSV columns expected (header): id,user_id,amount,datetime
-- Example:
-
-```bash
-curl -v -F "file=@history.csv" http://localhost:8000/migrate
-```
-
-2) GET /users/{user_id}/balance
-
-- Description: Return the current balance for a user. Supports optional `from` and `to` query parameters to restrict transactions considered.
-- Query params (optional):
-  - from (RFC3339 or YYYY-MM-DD)
-  - to (RFC3339 or YYYY-MM-DD)
-- Examples:
-
-```bash
-# Latest balance for user 1
-curl http://localhost:8000/users/1/balance
-
-# Balance for user 1 between dates
-curl "http://localhost:8000/users/1/balance?from=2023-01-01&to=2023-12-31"
-```
-
-Response (example JSON):
+### ✅ Sample Response
 
 ```json
 {
@@ -173,45 +99,40 @@ Response (example JSON):
 }
 ```
 
-3) GET /health
+📎 Swagger UI: [`/swagger/index.html`](http://localhost:8080/swagger/index.html)
 
-- Returns 200 OK when the service is available.
+---
 
-4) Swagger UI
+## 📊 Observability
 
-- Available at: /swagger/index.html
+- **Structured logging** with `zerolog`
+---
 
-## Database & migrations
+## 🧪 Testing
 
-- `init.sql` contains the schema used during initial database startup (mounted into the Postgres container).
-- For manual DB setup, run the SQL in `init.sql` against your Postgres instance before starting the service.
-
-## Testing
-
-- Unit tests for services exist in `internal/services` (e.g., `balance_service_test.go`, `migration_service_test.go`). Run them with:
+Run unit tests for services:
 
 ```bash
-go test ./...
+go test ./internal/services/...
 ```
 
-There are service-level tests under `internal/services` (e.g., `balance_service_test.go`, `migration_service_test.go`).
+Includes coverage for:
+- Migration logic
+- Balance calculations
+- Error handling
 
-## Development notes
+---
 
-- Config is loaded with `sethvargo/go-envconfig` in `internal/config/config.go`.
-- Server entrypoint: `cmd/api/main.go` — registers the routes:
-  - POST `/migrate`
-  - GET `/users/{user_id}/balance`
-  - GET `/health`
-  - GET `/swagger/*`
-- Dockerfile builds the binary with Go 1.24 and serves it from an alpine image on port 8000.
+## 🧠 Future Improvements
 
-## Troubleshooting
+- Add Redis caching for frequent balance queries
+- Improve CSV validation and error reporting
+- Add integration tests with real DB
+- Implement graceful shutdown and health checks
+- Extend Swagger with response examples and error codes
 
-- Database connection errors: verify `DATABASE_URL` and that Postgres is accepting connections.
-- Port in use: ensure nothing else is bound to port 8000 or set `PORT` to another value.
+---
 
-## License
+## 📄 License
 
-This project is provided as-is. See repository for license details.
-
+MIT — free to use, modify, and share.

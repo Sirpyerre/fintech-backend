@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/Sirpyerre/fintech-backend/internal/api"
 	"github.com/Sirpyerre/fintech-backend/internal/handlers/balance"
 	"log"
 	"net/http"
@@ -41,28 +42,11 @@ func main() {
 	balanceService := services.NewBalanceService(transactionRepo, logger)
 	balanceHandler := balance.NewBalanceHandler(balanceService, logger)
 
-	r := chi.NewRouter()
-	r.Use(observability.LoggingMiddleware(logger))
-	//routes
-	r.Post("/migrate", func(w http.ResponseWriter, r *http.Request) {
-		if err := migrationHandler.Migrate(w, r); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
-
-	r.Get("/users/{user_id}/balance", func(w http.ResponseWriter, r *http.Request) {
-		if err := balanceHandler.GetBalance(w, r); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
-
-	r.Get("/health", health.HealthHandler)
-	r.Get("/swagger/*", httpSwagger.WrapHandler)
+	r := api.NewRouter(migrationHandler, balanceHandler, logger)
 
 	// Start the server
 	logger.Info().Msgf("Starting server on port %s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, r); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
-
 }
