@@ -2,12 +2,14 @@ package migration
 
 import (
 	"errors"
+	"mime/multipart"
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/Sirpyerre/fintech-backend/internal/services"
 	"github.com/Sirpyerre/fintech-backend/pkg/common"
 	"github.com/rs/zerolog"
-	"mime/multipart"
-	"net/http"
-	"strings"
 )
 
 type MigrationHandler struct {
@@ -24,7 +26,8 @@ func NewMigrationHandler(migrationService services.Migrationer, logger zerolog.L
 
 // Migrate godoc
 // @Summary Migrate transactions from a CSV file
-// @Tags Migration Service
+// @Description Upload a CSV file to migrate transactions. Returns the number of skipped rows and a success message.
+// @Tags Migration
 // @Accept multipart/form-data
 // @Produce json
 // @Param file formData file true "CSV file to upload"
@@ -38,12 +41,15 @@ func (h *MigrationHandler) Migrate(w http.ResponseWriter, r *http.Request) error
 		return common.JSONError(w, http.StatusBadRequest, err.Error())
 	}
 
-	err = h.MigrationService.Migrate(r.Context(), file)
+	skipped, err := h.MigrationService.Migrate(r.Context(), file)
 	if err != nil {
 		return common.JSONError(w, http.StatusInternalServerError, err.Error())
 	}
 
-	return common.JSONSuccess(w, http.StatusOK, map[string]string{"message": "Migration successful"})
+	return common.JSONSuccess(w, http.StatusOK, map[string]string{
+		"skipped_rows": strconv.Itoa(skipped),
+		"message":      "Migration successful",
+	})
 }
 
 func extractFile(r *http.Request) (file multipart.File, err error) {

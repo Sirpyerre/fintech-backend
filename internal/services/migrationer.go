@@ -6,5 +6,5 @@ import (
 )
 
 type Migrationer interface {
-	Migrate(ctx context.Context, cvsFile io.Reader) error
+	Migrate(ctx context.Context, cvsFile io.Reader) (int, error)
 }

@@ -26,30 +26,31 @@ func NewMigrationService(transactionRepo repository.Transactioner, workers int, 
 	}
 }
 
-func (m *MigrationService) Migrate(ctx context.Context, cvsFile io.Reader) error {
-	transactions, err := m.parseCSV(cvsFile)
+func (m *MigrationService) Migrate(ctx context.Context, cvsFile io.Reader) (int, error) {
+	transactions, skipped, err := m.parseCSV(cvsFile)
 	if err != nil {
 		m.logger.Printf("Error parsing CSV: %v", err)
-		return err
+		return 0, err
 	}
 
 	if err := m.transactionRepo.StoreTransaction(ctx, transactions); err != nil {
 		m.logger.Printf("Error storing transactions: %v", err)
-		return err
+		return 0, err
 	}
 
-	return nil
+	m.logger.Info().Int("skipped_rows", skipped).Msg("Migration completed")
+	return skipped, nil
 }
 
-func (m *MigrationService) parseCSV(file io.Reader) ([]models.Transaction, error) {
+func (m *MigrationService) parseCSV(file io.Reader) ([]models.Transaction, int, error) {
 	if file == nil {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	reader := csv.NewReader(file)
 	_, err := reader.Read()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	type parseResult struct {
@@ -61,15 +62,22 @@ func (m *MigrationService) parseCSV(file io.Reader) ([]models.Transaction, error
 	results := make(chan parseResult)
 	var wg sync.WaitGroup
 
+	skippedCh := make(chan int, m.workers)
+
 	// workers
 	for i := 0; i < m.workers; i++ {
 		wg.Add(1)
 		go func() {
-			defer wg.Done()
+			skipped := 0
+			defer func() {
+				skippedCh <- skipped
+				wg.Done()
+			}()
 			for record := range jobs {
 				tx, err := parseRecord(record)
 				if err != nil {
 					m.logger.Error().Err(err).Str("row", record[0]).Msg("Skipping row due to parse error")
+					skipped++
 					continue // skip this row
 				}
 				results <- parseResult{Tx: tx, Err: nil}
@@ -95,6 +103,7 @@ func (m *MigrationService) parseCSV(file io.Reader) ([]models.Transaction, error
 	go func() {
 		wg.Wait()
 		close(results)
+		close(skippedCh)
 	}()
 
 	var transactions []models.Transaction
@@ -103,7 +112,13 @@ func (m *MigrationService) parseCSV(file io.Reader) ([]models.Transaction, error
 			transactions = append(transactions, *res.Tx)
 		}
 	}
-	return transactions, nil
+
+	skipped := 0
+	for s := range skippedCh {
+		skipped += s
+	}
+
+	return transactions, skipped, nil
 }
 
 func parseRecord(record []string) (*models.Transaction, error) {

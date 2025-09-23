@@ -36,6 +36,7 @@ const docTemplate = `{
         },
         "/migrate": {
             "post": {
+                "description": "Upload a CSV file to migrate transactions. Returns the number of skipped rows and a success message.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -43,7 +44,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Migration Service"
+                    "Migration"
                 ],
                 "summary": "Migrate transactions from a CSV file",
                 "parameters": [

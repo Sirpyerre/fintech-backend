@@ -29,8 +29,9 @@ func TestMigrationService(t *testing.T) {
 		repositoryMock.On("StoreTransaction", mock.Anything, mock.Anything).Return(assert.AnError)
 
 		migrationService := NewMigrationService(repositoryMock, workerCount, logger)
-		err := migrationService.Migrate(ctx, nil)
+		skipped, err := migrationService.Migrate(ctx, nil)
 		assert.Error(t, err)
+		assert.Equal(t, 0, skipped)
 		assert.Equal(t, assert.AnError, err)
 		repositoryMock.AssertExpectations(t)
 	})
@@ -45,8 +46,9 @@ func TestMigrationService(t *testing.T) {
 1,2,100.50,2023-10-01T10:00:00Z
 2,1,200.75,2023-10-02T11:30:00Z
 `
-		err := migrationService.Migrate(ctx, io.NopCloser(strings.NewReader(csvData)))
+		skipped, err := migrationService.Migrate(ctx, io.NopCloser(strings.NewReader(csvData)))
 		assert.Error(t, err)
+		assert.Equal(t, 0, skipped)
 		assert.Equal(t, assert.AnError, err)
 		repositoryMock.AssertExpectations(t)
 	})
@@ -61,8 +63,9 @@ func TestMigrationService(t *testing.T) {
 1,2,100.50,2023-10-01T10:00:00Z
 2,1,200.75,2023-10-02T11:30:00Z
 `
-		err := migrationService.Migrate(ctx, io.NopCloser(strings.NewReader(csvData)))
+		skipped, err := migrationService.Migrate(ctx, io.NopCloser(strings.NewReader(csvData)))
 		assert.NoError(t, err)
+		assert.Equal(t, 0, skipped)
 		repositoryMock.AssertExpectations(t)
 	})
 }
