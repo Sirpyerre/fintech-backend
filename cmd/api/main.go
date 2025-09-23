@@ -2,23 +2,19 @@ package main
 
 import (
 	"context"
-	"github.com/Sirpyerre/fintech-backend/internal/api"
-	"github.com/Sirpyerre/fintech-backend/internal/handlers/balance"
 	"log"
 	"net/http"
 
+	"github.com/Sirpyerre/fintech-backend/internal/api"
 	"github.com/Sirpyerre/fintech-backend/internal/config"
 	"github.com/Sirpyerre/fintech-backend/internal/dbconnection"
-	"github.com/Sirpyerre/fintech-backend/internal/handlers/health"
+	"github.com/Sirpyerre/fintech-backend/internal/handlers/balance"
 	"github.com/Sirpyerre/fintech-backend/internal/handlers/migration"
 	"github.com/Sirpyerre/fintech-backend/internal/observability"
 	"github.com/Sirpyerre/fintech-backend/internal/repository"
 	"github.com/Sirpyerre/fintech-backend/internal/services"
 
 	_ "github.com/Sirpyerre/fintech-backend/docs"
-
-	"github.com/go-chi/chi/v5"
-	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func main() {
