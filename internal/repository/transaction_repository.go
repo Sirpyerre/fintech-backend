@@ -30,8 +30,11 @@ func (r *TransactionRepository) StoreTransaction(ctx context.Context, records []
 		r.logger.Error().Err(err).Msg("failed to begin transaction")
 		return err
 	}
+
+	// Defer rollback only if commit hasn't happened
+	committed := false
 	defer func() {
-		if err != nil {
+		if !committed {
 			if rbErr := tx.Rollback(ctx); rbErr != nil {
 				r.logger.Error().Err(rbErr).Msg("failed to rollback transaction")
 			}
@@ -40,21 +43,17 @@ func (r *TransactionRepository) StoreTransaction(ctx context.Context, records []
 
 	stmt := `INSERT INTO transactions (user_id, amount, datetime) VALUES ($1, $2, $3)`
 	for _, t := range records {
-		_, err = tx.Exec(ctx, stmt, t.UserID, t.Amount, t.OccurredAt)
-		if err != nil {
-			r.logger.Error().Err(err).Msg("failed to insert transaction")
-			if rbErr := tx.Rollback(ctx); rbErr != nil {
-				r.logger.Error().Err(rbErr).Msg("failed to rollback transaction after insert error")
-			}
-			return err
+		if _, execErr := tx.Exec(ctx, stmt, t.UserID, t.Amount, t.OccurredAt); execErr != nil {
+			r.logger.Error().Err(execErr).Msg("failed to insert transaction")
+			return execErr
 		}
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
-		r.logger.Error().Err(err).Msg("failed to commit transaction")
-		return err
+	if commitErr := tx.Commit(ctx); commitErr != nil {
+		r.logger.Error().Err(commitErr).Msg("failed to commit transaction")
+		return commitErr
 	}
+	committed = true
 	return nil
 }
 
